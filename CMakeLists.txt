@@ -127,6 +127,7 @@ catkin_package(
 include_directories(
 #include
  ${catkin_INCLUDE_DIRS}
+ ${EIGEN_3_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -206,3 +207,6 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+add_executable(uav_model src/uav_model.cpp)
+target_link_libraries(uav_model ${catkin_LIBRARIES})
