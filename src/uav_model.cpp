@@ -75,7 +75,7 @@ public:
 		force_sub = n.subscribe("/uav_control/force", 1000, &DynamicModel::force_callback, this);
 		torque_sub = n.subscribe("/uav_control/torque", 1000, &DynamicModel::torque_callback, this);
 
-		d << 0, 0, 0;
+		d << 0, 0, -5;
 		d_dot_last << 0, 0, 0;
         Phi << 0, 0, 0;
         Phi_dot_last << 0, 0, 0;
@@ -121,15 +121,20 @@ public:
 
         f = -U_1*e_3 + m*g*R.inverse()*e_3;
 		if (d(2) >= 0){
-			f = f - m*g*R.inverse()*e_3;
+			if (U_1 <= m*g){
+				f = f - f;
+			}
 		}
+		f = f - f;
 
 		v_dot = (1/m)*f - w.cross(v);
         v = time_step*(v_dot + v_dot_last)/2 + v;
         v_dot_last = v_dot;
 
-		if (d(2) >= 0 && v(2) > 0){
-			v(2) = 0;
+		if (d(2) >= 0){
+			if (v(2) > 0){
+				v = v - v;
+			}
 		}
 
         d_dot = R*v;
@@ -142,7 +147,10 @@ public:
 
         w_dot = J.inverse()*(tau - w.cross(J*w));
         w = time_step*(w_dot + w_dot_last)/2 + w;
-        w_dot_last = w_dot;
+		if (d(2) >= 0){
+			w = w - w;
+		}
+		w_dot_last = w_dot;
         Phi_dot = R_2.inverse()*w;
         Phi = time_step*(Phi_dot + Phi_dot_last)/2 + Phi;
         Phi_dot_last = Phi_dot;
@@ -162,10 +170,9 @@ public:
 
 		myQuaternion.setRPY(Phi(0),Phi(1),Phi(2));
 
-		pose.orientation.x = myQuaternion[0];
-		pose.orientation.y = myQuaternion[1];
-		pose.orientation.z = myQuaternion[2];
-		pose.orientation.w = myQuaternion[3];
+		pose.orientation.x = Phi(0);
+		pose.orientation.y = Phi(1);
+		pose.orientation.z = Phi(2);
 		odom.pose.pose.orientation.x = myQuaternion[0];
 		odom.pose.pose.orientation.y = myQuaternion[1];
 		odom.pose.pose.orientation.z = myQuaternion[2];

@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<robot name="uav">
+
+  <material name="black">
+    <color rgba="1 1 1 1"/>
+  </material>
+
+  <link name="uav">
+    <visual>
+    	<origin rpy="3.141592 0 -1.57075" xyz="-0.05 0 0.04"/>
+      <geometry>
+        <!--mesh filename="package://uav_ros_pkg/meshes/parrot_outdoor.STL" scale="0.001 0.001 0.001"/-->
+        <mesh filename="package://uav_ros_pkg/meshes/parrot_indoor.STL" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+
+    <!--collision>
+    	<origin rpy="1.57075 0 1.57075" xyz="0 0 -0.25"/>
+      <geometry>
+        <mesh filename="package://urdf_tutorial/meshes/boat.dae" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision-->
+
+    <!--inertial>
+      <origin rpy="1.57075 3.1416 1.57075" xyz="0 0 -0.25"/>
+      <mass value="30"/>
+      <inertia
+        ixx="1.0" ixy="0.0" ixz="0.0"
+        iyy="1.0" iyz="0.0"
+        izz="4.1"/>
+    </inertial-->
+
+
+  </link>
+</robot>

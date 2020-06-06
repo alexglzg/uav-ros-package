@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(uav-ros-pkg)
+project(uav_ros_pkg)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -209,4 +209,8 @@ include_directories(
 # catkin_add_nosetests(test)
 
 add_executable(uav_model src/uav_model.cpp)
+add_executable(uav_tf2_broadcaster src/uav_tf2_broadcaster.cpp)
+add_executable(uav_pid src/uav_pid.cpp)
 target_link_libraries(uav_model ${catkin_LIBRARIES})
+target_link_libraries(uav_tf2_broadcaster ${catkin_LIBRARIES})
+target_link_libraries(uav_pid ${catkin_LIBRARIES})
