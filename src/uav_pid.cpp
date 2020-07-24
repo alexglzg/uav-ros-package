@@ -23,7 +23,7 @@ public:
   float theta_dot;
   float psi_dot;
 
-  static const float time_step = 0.01;
+  static const float time_step = 0.001;
 
   //Tracking variables
   float phi_d;
@@ -39,10 +39,10 @@ public:
   float psi_d_last;
 
   //Controller gains
-  static const float kp_phi = 0.8;
-  static const float kd_phi = 1.0;
-  static const float kp_theta = 0.8;
-  static const float kd_theta = 1.0;
+  static const float kp_phi = 0.2;
+  static const float kd_phi = 0.2;
+  static const float kp_theta = 0.2;
+  static const float kd_theta = 0.2;
   static const float kp_psi = 2.0;
   static const float kd_psi = 3.0;
 
@@ -115,8 +115,8 @@ public:
         e_psi = (e_psi/std::abs(e_psi))*(std::abs(e_psi)-2*3.141592);
     }
     
-    float e_phi_dot = phi_d_dot - phi_dot;
-    float e_theta_dot = theta_d_dot - theta_dot;
+    float e_phi_dot = 0 - phi_dot;
+    float e_theta_dot = 0 - theta_dot;
     float e_psi_dot = psi_d_dot - psi_dot;
 
     tau_phi = (kp_phi * e_phi) + (kd_phi * e_phi_dot);
@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
 {
   ros::init(argc, argv, "uav_pid");
   ProportionalIntegralDerivative proportionalIntegralDerivative;
-  int rate = 100;
+  int rate = 1000;
   ros::Rate loop_rate(rate);
 
   while (ros::ok())

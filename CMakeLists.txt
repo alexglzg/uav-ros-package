@@ -211,6 +211,8 @@ include_directories(
 add_executable(uav_model src/uav_model.cpp)
 add_executable(uav_tf2_broadcaster src/uav_tf2_broadcaster.cpp)
 add_executable(uav_pid src/uav_pid.cpp)
+add_executable(uav_ibvs_asmc src/uav_ibvs_asmc.cpp)
 target_link_libraries(uav_model ${catkin_LIBRARIES})
 target_link_libraries(uav_tf2_broadcaster ${catkin_LIBRARIES})
 target_link_libraries(uav_pid ${catkin_LIBRARIES})
+target_link_libraries(uav_ibvs_asmc ${catkin_LIBRARIES})
