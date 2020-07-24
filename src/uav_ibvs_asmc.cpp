@@ -7,6 +7,7 @@
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/Vector3.h"
 #include "std_msgs/Float64.h"
+#include "std_msgs/UInt8.h"
 
 float x = 0;
 float y = 0;
@@ -273,6 +274,7 @@ int main(int argc, char *argv[])
 
     ros::Publisher attitude_pub = n.advertise<geometry_msgs::Vector3>("/guidance/desired_attitude", 1000);
     ros::Publisher force_pub = n.advertise<std_msgs::Float64>("/uav_control/force", 1000);
+    ros::Publisher flag_pub = n.advertise<std_msgs::UInt8>("/uav_control/flag", 1000);
     ros::Subscriber pose_sub = n.subscribe("/uav_model/pose", 1000, pose_callback);
     ros::Subscriber vel_sub = n.subscribe("/uav_model/vel", 1000, vel_callback);
     int rate = 1000;
@@ -605,9 +607,12 @@ int main(int argc, char *argv[])
       std_msgs::Float64 force;
       force.data = thrust;
 
+      std_msgs::UInt8 flag;
+      flag.data = 1;
+
       attitude_pub.publish(desired_attitudes);
       force_pub.publish(force);
-
+      flag_pub.publish(flag);
 
       ros::spinOnce();
       loop_rate.sleep();
