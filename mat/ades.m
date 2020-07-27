@@ -33,3 +33,4 @@ for i = 1:length(u_vir_cam)
 end
 
 aD = mu20+mu02;
+fprintf('%.7f\n',aD)

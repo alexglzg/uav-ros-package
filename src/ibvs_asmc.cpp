@@ -3,6 +3,7 @@
 #include <fstream>
 #include "ros/ros.h"
 #include "geometry_msgs/Pose.h"
+#include "geometry_msgs/Pose2D.h"
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/Vector3.h"
 #include "nav_msgs/Odometry.h"
@@ -264,6 +265,28 @@ Eigen::Matrix3f KinematicOperator(float roll, float pitch)
     return R2;
 }
 
+
+float x = 0;
+float y = 0;
+float psi_usv = 0;
+float u = 0;
+float v = 0;
+float r = 0;
+
+void ins_callback(const geometry_msgs::Pose2D::ConstPtr& ins)
+{
+  x = ins->x;
+  y = ins->y;
+  psi_usv = ins->theta;
+}
+
+void vel_callback(const geometry_msgs::Vector3::ConstPtr& vel)
+{
+  u = vel->x;
+  v = vel->y; 
+  r = vel->z;
+}
+
 int main(int argc, char *argv[])
 {
 
@@ -273,6 +296,9 @@ int main(int argc, char *argv[])
     ros::Publisher uav_pose_pub = n.advertise<geometry_msgs::Pose>("/uav_model/pose", 1000);
 	ros::Publisher uav_vel_pub = n.advertise<geometry_msgs::Twist>("/uav_model/vel", 1000);
 	ros::Publisher uav_odom_pub = n.advertise<nav_msgs::Odometry>("/uav_model/odom", 1000);
+
+    ros::Subscriber ins_pose_sub = n.subscribe("/vectornav/ins_2d/NED_pose", 1000, ins_callback);
+    ros::Subscriber local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 1000, vel_callback);
 
     int rate = 1000;
     ros::Rate loop_rate(rate);
@@ -353,9 +379,10 @@ int main(int argc, char *argv[])
     float pitch_dot = 0;
      
     //Target
+    float radius = 0.25;
     Eigen::MatrixXf POI(3, 4);
-    POI << 1.25, 0.75, 0.75, 1.25,
-        0.5, 0.5, -0.5, -0.5,
+    POI << radius, -radius, -radius, radius,
+        radius, radius, -radius, -radius,
         0, 0, 0, 0;
     
     Eigen::Vector4f Tgt_Vel;
@@ -476,7 +503,7 @@ int main(int argc, char *argv[])
 
     //MORE PARAMETERS
     float focal = 0.0032; //Camera's focal length in meters.
-    float aD = 0.0000008; //Desired value of altitude feature.
+    float aD = 0.0000003; //0.0000008; //Desired value of altitude feature.
     float Upsi_est = (1 / 4.5);
     float Upsi_est_d = 0;
     float step = 0.001; //Integration step size
@@ -484,11 +511,49 @@ int main(int argc, char *argv[])
     float q4_last = 0;
     float Upsi_est_d_last = 0;
     
+    //USV Auxiliary variables
+    Eigen::Vector3f p1;
+    Eigen::Vector3f p2;
+    Eigen::Vector3f p3;
+    Eigen::Vector3f p4;
+    p1 << radius, radius, 0;
+    p2 << -radius, radius, 0;
+    p3 << -radius, -radius, 0;
+    p4 << radius, -radius, 0;
+    Eigen::Vector3f p1_n;
+    Eigen::Vector3f p2_n;
+    Eigen::Vector3f p3_n;
+    Eigen::Vector3f p4_n;
+    p1_n << radius + x, radius + y, 0;
+    p2_n << -radius + x, radius + y, 0;
+    p3_n << -radius + x, -radius + y, 0;
+    p4_n << radius + x, -radius + y, 0;
+    Eigen::Vector3f USV;
+    USV << x, y, 0;
+    Eigen::Vector3f USV_Vel_body;
+    USV_Vel_body << u, v, r;
+    Eigen::Vector3f USV_Vel_lin;
+    USV_Vel_lin = R_psi_T(psi_usv).transpose()*USV_Vel_body;
+
         //LOOP -.-.-.-.-.-.-.-.-.-.-.-.-.-.-LOOP.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-LOOP.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
 
         while (ros::ok())
         {
+            //******************************************************************************************
+            //-------------------------------------Update Target----------------------------------------
+            //******************************************************************************************
+            USV << x, y, 0;
+            USV_Vel_body << u, v, r;
+            p1_n = R_psi_T(psi_usv).transpose()*p1 + USV;
+            p2_n = R_psi_T(psi_usv).transpose()*p2 + USV;
+            p3_n = R_psi_T(psi_usv).transpose()*p3 + USV;
+            p4_n = R_psi_T(psi_usv).transpose()*p4 + USV;
 
+            POI << p1_n(0), p2_n(0), p3_n(0), p4_n(0),
+                p1_n(1), p2_n(1), p3_n(1), p4_n(1),
+                0, 0, 0, 0;
+            USV_Vel_lin = R_psi_T(psi_usv).transpose()*USV_Vel_body;
+            Tgt_Vel << USV_Vel_lin(0), USV_Vel_lin(1), 0, USV_Vel_lin(2);
             //******************************************************************************************
             //-----------------------------Image Features Extraction------------------------------------
             //******************************************************************************************
@@ -509,8 +574,6 @@ int main(int argc, char *argv[])
             q4_last = FeatVect_dot(3); //integral de q4_dot en n-1
 
             FeatVect(3) = q4;
-
-            
 
             //******************************************************************************************
             //-----------------------------Error Signal-------------------------------------------------
@@ -762,6 +825,7 @@ int main(int argc, char *argv[])
 
             myQuaternion.setRPY(phi,theta,psi);
 
+
             pose.orientation.x = phi;
             pose.orientation.y = theta;
             pose.orientation.z = psi;
@@ -770,12 +834,12 @@ int main(int argc, char *argv[])
             odom.pose.pose.orientation.z = myQuaternion[2];
             odom.pose.pose.orientation.w = myQuaternion[3];
 
-            vel.linear.x = UAV_Vel_lin(0);
-            vel.linear.y = UAV_Vel_lin(1);
-            vel.linear.z = UAV_Vel_lin(2);
-            odom.twist.twist.linear.x = UAV_Vel_lin(0);
-            odom.twist.twist.linear.y = UAV_Vel_lin(1);
-            odom.twist.twist.linear.z = UAV_Vel_lin(2);
+            vel.linear.x = UAV_Vel_body(0);
+            vel.linear.y = UAV_Vel_body(1);
+            vel.linear.z = UAV_Vel_body(2);
+            odom.twist.twist.linear.x = UAV_Vel_body(0);
+            odom.twist.twist.linear.y = UAV_Vel_body(1);
+            odom.twist.twist.linear.z = UAV_Vel_body(2);
 
             vel.angular.x = omega(0);
             vel.angular.y = omega(1);
