@@ -33,6 +33,7 @@ public:
 	float tau_theta;
     float tau_psi;
     float U_1;
+	int flag;
 
 	static const float m;
 	static const float Ixx;
@@ -74,8 +75,9 @@ public:
 
 		force_sub = n.subscribe("/uav_control/force", 1000, &DynamicModel::force_callback, this);
 		torque_sub = n.subscribe("/uav_control/torque", 1000, &DynamicModel::torque_callback, this);
+		flag_sub = n.subscribe("/uav_control/flag", 1000, &DynamicModel::flag_callback, this);
 
-		d << 0, 0, -5;
+		d << 2, 1, -5;
 		d_dot_last << 0, 0, 0;
         Phi << 0, 0, 0;
         Phi_dot_last << 0, 0, 0;
@@ -103,6 +105,11 @@ public:
         tau_psi = torque->z;
 	}
 
+	void flag_callback(const std_msgs::UInt8::ConstPtr& _flag)
+	{
+		flag = _flag->data;
+	}
+
 	void step()
 	{
 
@@ -119,13 +126,12 @@ public:
 
 		tau << tau_phi, tau_theta, tau_psi;
 
-        f = -U_1*e_3 + m*g*R.inverse()*e_3;
+		f = -U_1*e_3 + m*g*R.inverse()*e_3;
 		if (d(2) >= 0){
 			if (U_1 <= m*g){
 				f = f - f;
 			}
 		}
-		f = f - f;
 
 		v_dot = (1/m)*f - w.cross(v);
         v = time_step*(v_dot + v_dot_last)/2 + v;
@@ -207,6 +213,7 @@ private:
 
 	ros::Subscriber force_sub;
 	ros::Subscriber torque_sub;
+	ros::Subscriber flag_sub;
 
 };
 
@@ -221,14 +228,17 @@ int main(int argc, char *argv[])
 {
 	ros::init(argc, argv, "uav_model");
 	DynamicModel dynamicModel;
-	dynamicModel.time_step = 0.01;
+	dynamicModel.time_step = 0.001;
+	dynamicModel.flag = 0;
 	dynamicModel.U_1 = 0;
-	int rate = 100;
+	int rate = 1000;
 	ros::Rate loop_rate(rate);
 
   while (ros::ok())
   {
+	if (dynamicModel.flag == 1){
 	dynamicModel.step();
+	}
 	ros::spinOnce();
 	loop_rate.sleep();
   }

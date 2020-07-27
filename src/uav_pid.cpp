@@ -5,7 +5,7 @@
 #include "geometry_msgs/Pose.h"
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/Vector3.h"
-
+#include "std_msgs/UInt8.h"
 
 class ProportionalIntegralDerivative
 {
@@ -23,7 +23,9 @@ public:
   float theta_dot;
   float psi_dot;
 
-  static const float time_step = 0.01;
+  static const float time_step = 0.001;
+	int flag;
+
 
   //Tracking variables
   float phi_d;
@@ -39,10 +41,10 @@ public:
   float psi_d_last;
 
   //Controller gains
-  static const float kp_phi = 0.8;
-  static const float kd_phi = 1.0;
-  static const float kp_theta = 0.8;
-  static const float kd_theta = 1.0;
+  static const float kp_phi = 0.2;
+  static const float kd_phi = 0.2;
+  static const float kp_theta = 0.2;
+  static const float kd_theta = 0.2;
   static const float kp_psi = 2.0;
   static const float kd_psi = 3.0;
 
@@ -55,6 +57,7 @@ public:
     desired_attitude_sub = n.subscribe("/guidance/desired_attitude", 1000, &ProportionalIntegralDerivative::desiredAttitudeCallback, this);
     pose_sub = n.subscribe("/uav_model/pose", 1000, &ProportionalIntegralDerivative::poseCallback, this);
     vel_sub = n.subscribe("/uav_model/vel", 1000, &ProportionalIntegralDerivative::velocityCallback, this);
+    flag_sub = n.subscribe("/uav_control/flag", 1000, &ProportionalIntegralDerivative::flag_callback, this);
 
     phi = 0;
     theta = 0;
@@ -91,6 +94,11 @@ public:
     psi_dot = _vel -> angular.z;
   }
 
+  void flag_callback(const std_msgs::UInt8::ConstPtr& _flag)
+	{
+		flag = _flag->data;
+	}
+
   void control()
   {
     
@@ -115,8 +123,8 @@ public:
         e_psi = (e_psi/std::abs(e_psi))*(std::abs(e_psi)-2*3.141592);
     }
     
-    float e_phi_dot = phi_d_dot - phi_dot;
-    float e_theta_dot = theta_d_dot - theta_dot;
+    float e_phi_dot = 0 - phi_dot;
+    float e_theta_dot = 0 - theta_dot;
     float e_psi_dot = psi_d_dot - psi_dot;
 
     tau_phi = (kp_phi * e_phi) + (kd_phi * e_phi_dot);
@@ -148,6 +156,7 @@ private:
   ros::Subscriber desired_attitude_sub;
   ros::Subscriber pose_sub;
   ros::Subscriber vel_sub;
+  ros::Subscriber flag_sub;
 
 };
 
@@ -156,12 +165,16 @@ int main(int argc, char *argv[])
 {
   ros::init(argc, argv, "uav_pid");
   ProportionalIntegralDerivative proportionalIntegralDerivative;
-  int rate = 100;
+  proportionalIntegralDerivative.flag = 0;
+  int rate = 1000;
   ros::Rate loop_rate(rate);
 
   while (ros::ok())
   {
+    if (proportionalIntegralDerivative.flag == 1)
+    {
     proportionalIntegralDerivative.control();
+    }
     ros::spinOnce();
     loop_rate.sleep();
   }
