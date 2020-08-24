@@ -1,5 +1,5 @@
 %declare name of the bag
-experimentbag = rosbag('curved_2020-07-26-03-06-37.bag')
+experimentbag = rosbag('curved_2020-07-28-16-49-16.bag')
 %NED Path
 NED = select(experimentbag, "Topic", '/guidance/target');
 NEDxy = readMessages(NED,'DataFormat','struct');
