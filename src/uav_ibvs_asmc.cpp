@@ -402,7 +402,7 @@ int main(int argc, char *argv[])
 
     //MORE PARAMETERS
     float focal = 0.0032; //Camera's focal length in meters.
-    float aD = 0.0000008; //Desired value of altitude feature.
+    float aD = 0.0000032; //0.0000008; //Desired value of altitude feature.
     float Upsi_est = (1 / 4.5);
     float Upsi_est_d = 0;
     float step = 0.001; //Integration step size
