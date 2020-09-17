@@ -4,6 +4,7 @@
 #include "ros/ros.h"
 #include "geometry_msgs/Pose.h"
 #include "geometry_msgs/Pose2D.h"
+#include "geometry_msgs/Quaternion.h"
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/Vector3.h"
 #include "nav_msgs/Odometry.h"
@@ -25,13 +26,13 @@ Eigen::Matrix3d R_psi_T(double psi)
 
 Eigen::Vector2d Centroid(Eigen::MatrixXd Virtual_pix)
 {
-    float m10 = 0;
-    float m01 = 0;
+    double m10 = 0;
+    double m01 = 0;
     Eigen::VectorXd u = Virtual_pix.row(0);
     Eigen::VectorXd n = Virtual_pix.row(1);
 
-    float ug = u.sum() / u.size();
-    float ng = n.sum() / u.size();
+    double ug = u.sum() / u.size();
+    double ng = n.sum() / u.size();
 
     Eigen::Vector2d Center;
     Center << ug, ng;
@@ -43,26 +44,26 @@ Eigen::Vector4d ImFeat(Eigen::Vector2d Centroid, Eigen::MatrixXd Virtual_pixels,
 {
     Eigen::VectorXd u = Virtual_pixels.row(0);
     Eigen::VectorXd n = Virtual_pixels.row(1);
-    float mu20 = 0;
-    float mu02 = 0;
-    float mu11 = 0;
+    double mu20 = 0;
+    double mu02 = 0;
+    double mu11 = 0;
 
     for (int i = 0; i < u.size(); i++)
     {
-        float mu_20 = pow((u(i) - Centroid(0)), 2);
-        float mu_02 = pow((n(i) - Centroid(1)), 2);
-        float mu_11 = (u(i) - Centroid(0)) * (n(i) - Centroid(1));
+        double mu_20 = pow((u(i) - Centroid(0)), 2);
+        double mu_02 = pow((n(i) - Centroid(1)), 2);
+        double mu_11 = (u(i) - Centroid(0)) * (n(i) - Centroid(1));
         
         mu20 = mu20 + mu_20;
         mu02 = mu02 + mu_02;
         mu11 = mu11 + mu_11;
     }
 
-    float a = mu20 + mu02;
-    float qz = sqrt(a_desired / a);
-    float qx = qz * (Centroid(0) / focal_length);
-    float qy = qz * (Centroid(1) / focal_length);
-    float q_psi = 0.5 * atan(2 * mu11 / (mu20 - mu02));
+    double a = mu20 + mu02;
+    double qz = sqrt(a_desired / a);
+    double qx = qz * (Centroid(0) / focal_length);
+    double qy = qz * (Centroid(1) / focal_length);
+    double q_psi = 0.5 * atan(2 * mu11 / (mu20 - mu02));
 
     Eigen::Vector4d ImageFeatures;
     ImageFeatures<< qx, qy, qz, q_psi;
@@ -296,6 +297,10 @@ int main(int argc, char *argv[])
     ros::Publisher uav_pose_pub = n.advertise<geometry_msgs::Pose>("/uav_model/pose", 1000);
 	ros::Publisher uav_vel_pub = n.advertise<geometry_msgs::Twist>("/uav_model/vel", 1000);
 	ros::Publisher uav_odom_pub = n.advertise<nav_msgs::Odometry>("/uav_model/odom", 1000);
+    ros::Publisher uav_feat_pub = n.advertise<geometry_msgs::Pose2D>("/uav_control/features", 1000);
+    ros::Publisher uav_gains_pub = n.advertise<geometry_msgs::Quaternion>("/uav_control/gains", 1000);
+    ros::Publisher uav_control_pub = n.advertise<geometry_msgs::Quaternion>("/uav_control/input", 1000);
+    ros::Publisher uav_sigma_pub = n.advertise<geometry_msgs::Quaternion>("/uav_control/sigma", 1000);
 
     ros::Subscriber ins_pose_sub = n.subscribe("/vectornav/ins_2d/NED_pose", 1000, ins_callback);
     ros::Subscriber local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 1000, vel_callback);
@@ -307,10 +312,14 @@ int main(int argc, char *argv[])
     geometry_msgs::Twist vel;
     nav_msgs::Odometry odom;
     tf2::Quaternion myQuaternion;
+    geometry_msgs::Pose2D feat;
+    geometry_msgs::Quaternion gains;
+    geometry_msgs::Quaternion input;
+    geometry_msgs::Quaternion uav_sigma;
 
     //UAV inicial conditions 
     Eigen::Vector3d UAV;
-    UAV << 2, 1, -5;
+    UAV << 2, 1, -4;
     
     Eigen::Vector3d UAV_dot_last;
     UAV_dot_last << 0, 0, 0;
@@ -322,7 +331,8 @@ int main(int argc, char *argv[])
     UAV_Vel_lin << 0, 0, 0;
     
     Eigen::Vector3d UAV_Vel_body;
-   
+    UAV_Vel_body << 0, 0, 0;
+    
     //UAV Parameters
     double UAV_mass = 2;
 
@@ -401,10 +411,7 @@ int main(int argc, char *argv[])
 
     //Error Signal
     Eigen::Vector4d Error;
-    
-    
     Eigen::Vector4d Error_d;
-    
 
     Eigen::Vector4d kappa;
     kappa << 0, 0, 0, 0;
@@ -458,7 +465,7 @@ int main(int argc, char *argv[])
     k << 0.2, 0.2, 0.2, 0.2;
     kmin << 0.1, 0.1, 0.1, 0.1;
     mu << 0.2, 0.2, 0.2, 0.2;
-    lambda << 2.5, 2.5, 2.5, 20; //4, 4, 2, 20;
+    lambda << 2.5, 2.5, 2.5, 20; //4, 4, 2, 20
 
     K1 << 0, 0, 0, 0;
     K1_d << 0, 0, 0, 0;
@@ -531,6 +538,51 @@ int main(int argc, char *argv[])
     Eigen::Vector3d USV_Vel_lin;
     USV_Vel_lin = R_psi_T(psi_usv).transpose()*USV_Vel_body;
 
+    pose.position.x = UAV(0);
+    pose.position.y = UAV(1);
+    pose.position.z = UAV(2);
+    odom.pose.pose.position.x = UAV(0);
+    odom.pose.pose.position.y = UAV(1);
+    odom.pose.pose.position.z = UAV(2);
+
+    myQuaternion.setRPY(phi,theta,psi);
+
+    pose.orientation.x = phi;
+    pose.orientation.y = theta;
+    pose.orientation.z = psi;
+    odom.pose.pose.orientation.x = myQuaternion[0];
+    odom.pose.pose.orientation.y = myQuaternion[1];
+    odom.pose.pose.orientation.z = myQuaternion[2];
+    odom.pose.pose.orientation.w = myQuaternion[3];
+
+    vel.linear.x = UAV_Vel_body(0);
+    vel.linear.y = UAV_Vel_body(1);
+    vel.linear.z = UAV_Vel_body(2);
+    odom.twist.twist.linear.x = UAV_Vel_body(0);
+    odom.twist.twist.linear.y = UAV_Vel_body(1);
+    odom.twist.twist.linear.z = UAV_Vel_body(2);
+
+    vel.angular.x = omega(0);
+    vel.angular.y = omega(1);
+    vel.angular.z = omega(2);
+    odom.twist.twist.angular.x = omega(0);
+    odom.twist.twist.angular.y = omega(1);
+    odom.twist.twist.angular.z = omega(2);
+
+    //Data publishing
+    uav_pose_pub.publish(pose);
+    uav_vel_pub.publish(vel);
+    uav_odom_pub.publish(odom);
+    
+    ros::Duration(1.0).sleep();
+
+    //Data publishing
+    uav_pose_pub.publish(pose);
+    uav_vel_pub.publish(vel);
+    uav_odom_pub.publish(odom);
+
+    ros::Duration(1.0).sleep();
+
         //LOOP -.-.-.-.-.-.-.-.-.-.-.-.-.-.-LOOP.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-LOOP.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
 
         while (ros::ok())
@@ -590,7 +642,7 @@ int main(int argc, char *argv[])
             //Adaptive Gains
             if (K1(0) > kmin(0))
             {
-                K1_d(0) = k(0) * sign(fabs(sigma(0) - mu(0)));
+                K1_d(0) = k(0) * sign(abs(sigma(0)) - mu(0));
             }
 
             else
@@ -600,7 +652,7 @@ int main(int argc, char *argv[])
 
             if (K1(1) > kmin(1))
             {
-                K1_d(1) = k(1) * sign(fabs(sigma(1) - mu(1)));
+                K1_d(1) = k(1) * sign(abs(sigma(1)) - mu(1));
             }
 
             else
@@ -610,7 +662,7 @@ int main(int argc, char *argv[])
 
             if (K1(2) > kmin(2))
             {
-                K1_d(2) = k(2) * sign(fabs(sigma(2) - mu(2)));
+                K1_d(2) = k(2) * sign(abs(sigma(2)) - mu(2));
             }
 
             else
@@ -620,7 +672,7 @@ int main(int argc, char *argv[])
 
             if (K1(3) > kmin(3))
             {
-                K1_d(3) = k(3) * sign(fabs(sigma(3) - mu(3)));
+                K1_d(3) = k(3) * sign(abs(sigma(3)) - mu(3));
             }
 
             else
@@ -718,7 +770,7 @@ int main(int argc, char *argv[])
                 phi_des = -1.5;
             }
             
-            float theta_des = Desired_pitch(f, thrust, phi_des);
+            double theta_des = Desired_pitch(f, thrust, phi_des);
 
             bool theta_nan = std::isnan(theta_des);
             if (theta_nan == true)
@@ -843,10 +895,32 @@ int main(int argc, char *argv[])
             odom.twist.twist.angular.y = omega(1);
             odom.twist.twist.angular.z = omega(2);
 
+            feat.x = Centre(0);
+            feat.y = Centre(1);
+
+            gains.x = K1(0);
+            gains.y = K1(1);
+            gains.z = K1(2);
+            gains.w = K1(3);
+
+            input.x = asmc(0);
+            input.y = asmc(1);
+            input.z = asmc(2);
+            input.w = asmc(3);
+
+            uav_sigma.x = sigma(0);
+            uav_sigma.y = sigma(1);
+            uav_sigma.z = sigma(2);
+            uav_sigma.w = sigma(3);
+
             //Data publishing
             uav_pose_pub.publish(pose);
             uav_vel_pub.publish(vel);
             uav_odom_pub.publish(odom);
+            uav_feat_pub.publish(feat);
+            uav_gains_pub.publish(gains);
+            uav_control_pub.publish(input);
+            uav_sigma_pub.publish(uav_sigma);
 
             ros::spinOnce();
 	        loop_rate.sleep();
