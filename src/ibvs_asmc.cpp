@@ -273,6 +273,7 @@ double psi_usv = 0;
 double u = 0;
 double v = 0;
 double r = 0;
+double dAD = 0.000000568;
 
 void ins_callback(const geometry_msgs::Pose2D::ConstPtr& ins)
 {
@@ -286,6 +287,11 @@ void vel_callback(const geometry_msgs::Vector3::ConstPtr& vel)
   u = vel->x;
   v = vel->y; 
   r = vel->z;
+}
+
+void ad_callback(const std_msgs::Float64::ConstPtr& ad)
+{
+  dAD = ad->data;
 }
 
 int main(int argc, char *argv[])
@@ -304,6 +310,7 @@ int main(int argc, char *argv[])
 
     ros::Subscriber ins_pose_sub = n.subscribe("/vectornav/ins_2d/NED_pose", 1000, ins_callback);
     ros::Subscriber local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 1000, vel_callback);
+    ros::Subscriber des_ad_sub = n.subscribe("/ad", 1000, ad_callback);
 
     int rate = 1000;
     ros::Rate loop_rate(rate);
@@ -417,8 +424,8 @@ int main(int argc, char *argv[])
     kappa << 0, 0, 0, 0;
 
     //IBVS Gains
-    double r1 = 0.15;//0.1;
-    double r2 = 0.3;//0.2;
+    double r1 = 0.04;//0.15;//0.1;
+    double r2 = 0.002;//0.3;//0.2;
     double r3 = 0.3;//0.3;
     double gamma = 0.1;
     double eta_1 = 0.003;
@@ -462,10 +469,10 @@ int main(int argc, char *argv[])
     Eigen::Vector4d asmc;
 
     K2 << 0.6, 0.6, 0.6, 1;
-    k << 0.2, 0.2, 0.2, 0.2;
-    kmin << 0.1, 0.1, 0.1, 0.1;
+    k << 0.1, 0.1, 0.1, 0.1;//0.2, 0.2, 0.2, 0.2;
+    kmin << 0.01, 0.01, 0.01, 0.01;//0.1, 0.1, 0.1, 0.1;
     mu << 0.2, 0.2, 0.2, 0.2;
-    lambda << 2.5, 2.5, 2.5, 20; //4, 4, 2, 20
+    lambda << 4.0, 8.0, 4.0, 4.0;//2.5, 2.5, 2.5, 20; //4, 4, 2, 20
 
     K1 << 0, 0, 0, 0;
     K1_d << 0, 0, 0, 0;
@@ -496,9 +503,9 @@ int main(int argc, char *argv[])
     xi_d_last << 0, 0, 0, 0;
 
     //PD Controller Gains
-    double Kp1 = 0.2;
-    double Kp2 = 0.2;
-    double Kp3 = 2;
+    double Kp1 = 0.15;//0.2;
+    double Kp2 = 0.15;//0.2;
+    double Kp3 = 4.0;//2;
 
     double Kd1 = 0.2;
     double Kd2 = 0.2;
@@ -506,7 +513,7 @@ int main(int argc, char *argv[])
 
     //MORE PARAMETERS
     double focal = 0.0032; //Camera's focal length in meters.
-    double aD = 0.00000128; //0.0000003; //Desired value of altitude feature.
+    double aD = dAD; //0.0000003; //Desired value of altitude feature.
     double Upsi_est = (1 / 4.5);
     double Upsi_est_d = 0;
     double step = 0.001; //Integration step size
@@ -590,6 +597,7 @@ int main(int argc, char *argv[])
             //******************************************************************************************
             //-------------------------------------Update Target----------------------------------------
             //******************************************************************************************
+            aD = dAD;
             USV << x, y, 0;
             USV_Vel_body << u, v, r;
             p1_n = R_psi_T(psi_usv).transpose()*p1 + USV;
