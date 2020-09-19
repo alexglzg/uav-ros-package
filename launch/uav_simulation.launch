@@ -2,8 +2,6 @@
 
     <node name="uav_tf2_broadcaster" type="uav_tf2_broadcaster" pkg="uav_ros_pkg" />
 
-    <node name="uav_model" type="uav_model" pkg="uav_ros_pkg" />
-
     <arg name="model" default="$(find uav_ros_pkg)/urdf/uav.urdf"/>
 
     <param name="robot_description" command="$(find xacro)/xacro $(arg model)" />
