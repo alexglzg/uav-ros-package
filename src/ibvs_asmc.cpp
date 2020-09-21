@@ -274,6 +274,9 @@ double u = 0;
 double v = 0;
 double r = 0;
 double dAD = 0.000000568;
+double delta_x = 0;
+double delta_y = 0;
+double delta_z = 0;
 
 void ins_callback(const geometry_msgs::Pose2D::ConstPtr& ins)
 {
@@ -294,6 +297,13 @@ void ad_callback(const std_msgs::Float64::ConstPtr& ad)
   dAD = ad->data;
 }
 
+void disturbance_callback(const geometry_msgs::Vector3::ConstPtr& dis)
+{
+  delta_x = dis->x;
+  delta_y = dis->y; 
+  delta_z = dis->z;
+}
+
 int main(int argc, char *argv[])
 {
 
@@ -311,6 +321,7 @@ int main(int argc, char *argv[])
     ros::Subscriber ins_pose_sub = n.subscribe("/vectornav/ins_2d/NED_pose", 1000, ins_callback);
     ros::Subscriber local_vel_sub = n.subscribe("/vectornav/ins_2d/local_vel", 1000, vel_callback);
     ros::Subscriber des_ad_sub = n.subscribe("/ad", 1000, ad_callback);
+    ros::Subscriber disturbance_sub = n.subscribe("/uav_disturbance", 1000, disturbance_callback);
 
     int rate = 1000;
     ros::Rate loop_rate(rate);
@@ -326,7 +337,7 @@ int main(int argc, char *argv[])
 
     //UAV inicial conditions 
     Eigen::Vector3d UAV;
-    UAV << 2, 1, -4;
+    UAV << -2, -1, -4;
     
     Eigen::Vector3d UAV_dot_last;
     UAV_dot_last << 0, 0, 0;
@@ -469,10 +480,10 @@ int main(int argc, char *argv[])
     Eigen::Vector4d asmc;
 
     K2 << 0.6, 0.6, 0.6, 1;
-    k << 0.1, 0.1, 0.1, 0.1;//0.2, 0.2, 0.2, 0.2;
-    kmin << 0.01, 0.01, 0.01, 0.01;//0.1, 0.1, 0.1, 0.1;
-    mu << 0.2, 0.2, 0.2, 0.2;
-    lambda << 4.0, 8.0, 4.0, 4.0;//2.5, 2.5, 2.5, 20; //4, 4, 2, 20
+    k << 0.1, 0.1, 0.1, 0.1;
+    kmin << 0.01, 0.01, 0.01, 0.01;
+    mu << 0.02, 0.02, 0.02, 0.05;
+    lambda << 2.0, 2.0, 0.85, 4.0;
 
     K1 << 0, 0, 0, 0;
     K1_d << 0, 0, 0, 0;
@@ -544,6 +555,9 @@ int main(int argc, char *argv[])
     USV_Vel_body << u, v, r;
     Eigen::Vector3d USV_Vel_lin;
     USV_Vel_lin = R_psi_T(psi_usv).transpose()*USV_Vel_body;
+
+    Eigen::Vector3d Delta;
+    Delta << delta_x, delta_y, delta_z;
 
     pose.position.x = UAV(0);
     pose.position.y = UAV(1);
@@ -650,7 +664,7 @@ int main(int argc, char *argv[])
             //Adaptive Gains
             if (K1(0) > kmin(0))
             {
-                K1_d(0) = k(0) * sign(abs(sigma(0)) - mu(0));
+                K1_d(0) = k(0) * sign(std::abs(sigma(0)) - mu(0));
             }
 
             else
@@ -660,7 +674,7 @@ int main(int argc, char *argv[])
 
             if (K1(1) > kmin(1))
             {
-                K1_d(1) = k(1) * sign(abs(sigma(1)) - mu(1));
+                K1_d(1) = k(1) * sign(std::abs(sigma(1)) - mu(1));
             }
 
             else
@@ -670,7 +684,7 @@ int main(int argc, char *argv[])
 
             if (K1(2) > kmin(2))
             {
-                K1_d(2) = k(2) * sign(abs(sigma(2)) - mu(2));
+                K1_d(2) = k(2) * sign(std::abs(sigma(2)) - mu(2));
             }
 
             else
@@ -680,7 +694,7 @@ int main(int argc, char *argv[])
 
             if (K1(3) > kmin(3))
             {
-                K1_d(3) = k(3) * sign(abs(sigma(3)) - mu(3));
+                K1_d(3) = k(3) * sign(std::abs(sigma(3)) - mu(3));
             }
 
             else
@@ -700,11 +714,14 @@ int main(int argc, char *argv[])
                 K1_d_last(j) = K1_d(j);
             }
 
+            Delta << delta_x, delta_y, delta_z;
+            Delta = R_psi_T(psi) * Delta;
+
             //ASMC Calculus
-            asmc(0) = K1(0) * sqrt(abs(sigma(0))) * sign(sigma(0)) + K2(0) * sigma(0) + PHI(0);
-            asmc(1) = K1(1) * sqrt(abs(sigma(1))) * sign(sigma(1)) + K2(1) * sigma(1) + PHI(1);
-            asmc(2) = K1(2) * sqrt(abs(sigma(2))) * sign(sigma(2)) + K2(2) * sigma(2) + PHI(2);
-            asmc(3) = K1(3) * sqrt(abs(sigma(3))) * sign(sigma(3)) + K2(3) * sigma(3) + PHI(3);
+            asmc(0) = K1(0) * sqrt(std::abs(sigma(0))) * sign(sigma(0)) + K2(0) * sigma(0) + PHI(0) + Delta(0);
+            asmc(1) = K1(1) * sqrt(std::abs(sigma(1))) * sign(sigma(1)) + K2(1) * sigma(1) + PHI(1) + Delta(1);
+            asmc(2) = K1(2) * sqrt(std::abs(sigma(2))) * sign(sigma(2)) + K2(2) * sigma(2) + PHI(2) + Delta(2);
+            asmc(3) = K1(3) * sqrt(std::abs(sigma(3))) * sign(sigma(3)) + K2(3) * sigma(3) + PHI(3);
 
             //Image Filter (PHI)
             RHO << atan(PHI(0)), atan(PHI(1)), atan(PHI(2)), atan(PHI(3));
@@ -911,10 +928,10 @@ int main(int argc, char *argv[])
             gains.z = K1(2);
             gains.w = K1(3);
 
-            input.x = asmc(0);
-            input.y = asmc(1);
-            input.z = asmc(2);
-            input.w = asmc(3);
+            input.x = Tau(0);
+            input.y = Tau(1);
+            input.z = Tau(2);
+            input.w = thrust;
 
             uav_sigma.x = sigma(0);
             uav_sigma.y = sigma(1);
