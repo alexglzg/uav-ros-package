@@ -894,7 +894,7 @@ int main(int argc, char *argv[])
             pose.position.z = UAV(2);
             odom.pose.pose.position.x = UAV(0);
             odom.pose.pose.position.y = UAV(1);
-            odom.pose.pose.position.z = UAV(2);
+            odom.pose.pose.position.z = UAV(2)-0.4;
 
             myQuaternion.setRPY(phi,theta,psi);
 
