@@ -1,5 +1,5 @@
 %declare name of the bag
-experimentbag = rosbag('curved_2020-09-19-19-35-10.bag')
+experimentbag = rosbag('curved_2020-09-28-19-07-34.bag')
 disp('3DNED')
 %NED Path
 NED = select(experimentbag, "Topic", '/guidance/target');
