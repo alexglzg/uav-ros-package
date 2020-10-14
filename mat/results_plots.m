@@ -1,5 +1,5 @@
 %declare name of the bag
-experimentbag = rosbag('curved_2020-09-28-19-07-34.bag')
+experimentbag = rosbag('pd_curved_2020-10-12-23-12-02.bag')
 disp('3DNED')
 %NED Path
 NED = select(experimentbag, "Topic", '/guidance/target');
@@ -9,7 +9,7 @@ NEDxPoints = NEDxPoints(1:10:end,:);
 NEDyPoints = cellfun(@(m) double(m.Y),NEDxy);
 NEDyPoints = NEDyPoints(1:10:end,:);
 figure
-zeta = zeros(length(NEDxPoints));
+zeta = NEDxPoints*0;
 plot3(NEDyPoints,NEDxPoints,zeta,'k--','LineWidth',1.5)
 hold on
 %NED USV
@@ -19,7 +19,7 @@ NEDxPointsusv = cellfun(@(m) double(m.X),NEDxyusv);
 NEDxPointsusv = NEDxPointsusv(1:10:end,:);
 NEDyPointsusv = cellfun(@(m) double(m.Y),NEDxyusv);
 NEDyPointsusv = NEDyPointsusv(1:10:end,:);
-zetausv = zeros(length(NEDxPointsusv));
+zetausv = NEDxPointsusv*0;
 plot3(NEDyPointsusv,NEDxPointsusv,zetausv,'b-','LineWidth',1.5)
 hold on
 %NED UAV
@@ -163,7 +163,7 @@ uavzdata = uavzts.get.Data;
 uavzdata = uavzdata(1:100:end,:);
 t = uavzts.get.Time - start_time;
 t = t(1:100:end,:);
-zetaref = zeros(length(t));
+zetaref = t*0;
 figure
 plot(t,zetaref,'b-','LineWidth',1.5)
 hold on
@@ -171,57 +171,6 @@ plot(t,uavzdata,'r-.','LineWidth',1.5)
 legend('$z_{USV}$', '$z_{UAV}$', 'Interpreter', 'latex')
 xlabel('Time [s]', 'Interpreter', 'latex') 
 ylabel('$z$ [m]', 'Interpreter', 'latex')
-
-%Gains
-disp('Gains')
-uavk = select(experimentbag, "Topic", '/uav_control/gains');
-uavk1ts = timeseries(uavk, 'X');
-uavk1data = uavk1ts.get.Data;
-uavk1data = uavk1data(1:100:end,:);
-t = uavk1ts.get.Time - start_time;
-t = t(1:100:end,:);
-figure
-plot(t,uavk1data,'g-','LineWidth',1.5)
-hold on
-uavk2ts = timeseries(uavk, 'Y');
-uavk2data = uavk2ts.get.Data;
-uavk2data = uavk2data(1:100:end,:);
-t = uavk2ts.get.Time - start_time;
-t = t(1:100:end,:);
-plot(t,uavk2data,'b-.','LineWidth',1.5)
-hold on
-uavk3ts = timeseries(uavk, 'Z');
-uavk3data = uavk3ts.get.Data;
-uavk3data = uavk3data(1:100:end,:);
-t = uavk3ts.get.Time - start_time;
-t = t(1:100:end,:);
-plot(t,uavk3data,'r--','LineWidth',1.5)
-hold on
-uavk4ts = timeseries(uavk, 'W');
-uavk4data = uavk4ts.get.Data;
-uavk4data = uavk4data(1:100:end,:);
-t = uavk4ts.get.Time - start_time;
-t = t(1:100:end,:);
-plot(t,uavk4data,'k:','LineWidth',1.5)
-hold on
-usvk1 = select(experimentbag, "Topic", '/usv_control/asmc/speed_gain');
-usvk1ts = timeseries(usvk1, 'Data');
-t = usvk1ts.get.Time - start_time;
-t = t(1:10:end,:);
-usvk1data = usvk1ts.get.Data;
-usvk1data = usvk1data(1:10:end,:);
-plot(t,usvk1data,'c--','LineWidth',1.5)
-hold on
-usvk2 = select(experimentbag, "Topic", "/usv_control/asmc/heading_gain");
-usvk2ts = timeseries(usvk2, 'Data');
-t = usvk2ts.get.Time - start_time;
-t = t(1:10:end,:);
-usvk2data = usvk2ts.get.Data;
-usvk2data = usvk2data(1:10:end,:);
-plot(t,usvk2data,'m:','LineWidth',1.5)
-legend('$UAV_1$', '$UAV_2$', '$UAV_3$', '$UAV_4$','$USV_1$', '$USV_2$', 'Interpreter', 'latex')
-xlabel('Time [s]', 'Interpreter', 'latex') 
-ylabel('Gain', 'Interpreter', 'latex')
 
 %Control effort uav
 disp('UUAV')
@@ -337,3 +286,54 @@ plot(t,tzdata,'r-','LineWidth',1.5)
 legend('$T_{x}$', '$T_{\psi}$', 'Interpreter', 'latex')
 xlabel('Time [s]', 'Interpreter', 'latex') 
 ylabel('Thrust [N]', 'Interpreter', 'latex')
+
+%Gains
+disp('Gains')
+uavk = select(experimentbag, "Topic", '/uav_control/gains');
+uavk1ts = timeseries(uavk, 'X');
+uavk1data = uavk1ts.get.Data;
+uavk1data = uavk1data(1:100:end,:);
+t = uavk1ts.get.Time - start_time;
+t = t(1:100:end,:);
+figure
+plot(t,uavk1data,'g-','LineWidth',1.5)
+hold on
+uavk2ts = timeseries(uavk, 'Y');
+uavk2data = uavk2ts.get.Data;
+uavk2data = uavk2data(1:100:end,:);
+t = uavk2ts.get.Time - start_time;
+t = t(1:100:end,:);
+plot(t,uavk2data,'b-.','LineWidth',1.5)
+hold on
+uavk3ts = timeseries(uavk, 'Z');
+uavk3data = uavk3ts.get.Data;
+uavk3data = uavk3data(1:100:end,:);
+t = uavk3ts.get.Time - start_time;
+t = t(1:100:end,:);
+plot(t,uavk3data,'r--','LineWidth',1.5)
+hold on
+uavk4ts = timeseries(uavk, 'W');
+uavk4data = uavk4ts.get.Data;
+uavk4data = uavk4data(1:100:end,:);
+t = uavk4ts.get.Time - start_time;
+t = t(1:100:end,:);
+plot(t,uavk4data,'k:','LineWidth',1.5)
+hold on
+usvk1 = select(experimentbag, "Topic", '/usv_control/asmc/speed_gain');
+usvk1ts = timeseries(usvk1, 'Data');
+t = usvk1ts.get.Time - start_time;
+t = t(1:10:end,:);
+usvk1data = usvk1ts.get.Data;
+usvk1data = usvk1data(1:10:end,:);
+plot(t,usvk1data,'c--','LineWidth',1.5)
+hold on
+usvk2 = select(experimentbag, "Topic", "/usv_control/asmc/heading_gain");
+usvk2ts = timeseries(usvk2, 'Data');
+t = usvk2ts.get.Time - start_time;
+t = t(1:10:end,:);
+usvk2data = usvk2ts.get.Data;
+usvk2data = usvk2data(1:10:end,:);
+plot(t,usvk2data,'m:','LineWidth',1.5)
+legend('$UAV_1$', '$UAV_2$', '$UAV_3$', '$UAV_4$','$USV_1$', '$USV_2$', 'Interpreter', 'latex')
+xlabel('Time [s]', 'Interpreter', 'latex') 
+ylabel('Gain', 'Interpreter', 'latex')
