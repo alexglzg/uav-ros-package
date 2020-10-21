@@ -76,7 +76,7 @@ int main(int argc, char** argv){
   TfAndPath tfAndPath;
 
   while (ros::ok()){
-    ros::Rate(1000).sleep();
+    ros::Rate(100).sleep();
     ros::spinOnce();
   }
 
