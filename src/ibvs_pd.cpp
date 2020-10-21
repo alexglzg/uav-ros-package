@@ -543,7 +543,7 @@ int main(int argc, char *argv[])
     pose.position.z = UAV(2);
     odom.pose.pose.position.x = UAV(0);
     odom.pose.pose.position.y = UAV(1);
-    odom.pose.pose.position.z = UAV(2);
+    odom.pose.pose.position.z = UAV(2)-0.4;
 
     myQuaternion.setRPY(phi,theta,psi);
 
@@ -580,6 +580,9 @@ int main(int argc, char *argv[])
     uav_pose_pub.publish(pose);
     uav_vel_pub.publish(vel);
     uav_odom_pub.publish(odom);
+
+    double time_last = ros::Time::now().toSec();
+    double time_now = ros::Time::now().toSec();
 
     ros::Duration(1.0).sleep();
 
@@ -842,12 +845,20 @@ int main(int argc, char *argv[])
             input.z = Tau(2);
             input.w = thrust;
 
+            time_now = ros::Time::now().toSec();
+
+            if ((time_now-time_last) > 0.01)
+            {
             //Data publishing
             uav_pose_pub.publish(pose);
             uav_vel_pub.publish(vel);
             uav_odom_pub.publish(odom);
             uav_feat_pub.publish(feat);
             uav_control_pub.publish(input);
+
+            time_last = time_now;
+
+            }
 
             ros::spinOnce();
 	        loop_rate.sleep();

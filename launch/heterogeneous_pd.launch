@@ -13,6 +13,6 @@
     <node name="ibvs_pd" type="ibvs_pd" pkg="uav_ros_pkg" />
 
     <!--Launch rosbag to record topics -->
-    <node type="record" pkg="rosbag" name="recorder" args="record -o /home/alex/Documents/rasp_ws/src/uav_ros_pkg/mat/bags/pd_curved /guidance/target /vectornav/ins_2d/NED_pose /uav_model/pose /guidance/desired_heading /guidance/ye /guidance/desired_speed /vectornav/ins_2d/local_vel /usv_control/asmc/speed_gain /usv_control/asmc/heading_gain /uav_control/input /uav_control/features /usv_control/controller/right_thruster /usv_control/controller/left_thruster /usv_control/controller/control_input" />
+    <!--node type="record" pkg="rosbag" name="recorder" args="record -o /home/alex/Documents/rasp_ws/src/uav_ros_pkg/mat/bags/pd_curved /guidance/target /vectornav/ins_2d/NED_pose /uav_model/pose /guidance/desired_heading /guidance/ye /guidance/desired_speed /vectornav/ins_2d/local_vel /usv_control/asmc/speed_gain /usv_control/asmc/heading_gain /uav_control/input /uav_control/features /usv_control/controller/right_thruster /usv_control/controller/left_thruster /usv_control/controller/control_input" /-->
 
 </launch>
